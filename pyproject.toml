@@ -11,6 +11,9 @@ fastapi = "^0.112.2"
 loguru = "^0.7.2"
 dynaconf = "^3.2.6"
 uvicorn = "^0.30.6"
+numpy = "^2.1.0"
+onnxruntime = "^1.19.0"
+huggingface-hub = "^0.24.6"
 
 
 [build-system]

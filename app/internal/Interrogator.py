@@ -41,7 +41,9 @@ kaomojis = [
     "||_||",
 ]
 
+
 def load_labels(dataframe) -> list[str]:
+    # TODO use https://docs.python.org/3/library/csv.html
     name_series = dataframe["name"]
     name_series = name_series.map(
         lambda x: x.replace("_", " ") if x not in kaomojis else x
@@ -117,8 +119,11 @@ class Interrogator:
 
         self.last_loaded_repo = model_repo
 
-
     def prepare_image(self, image_input):
+        # TODO replace Pillow with this https://docs.wand-py.org
+        # TODO makle directly numpy array
+        # TODO flip image in numpy
+
         if isinstance(image_input, str):
             image = Image.open(image_input).convert("RGBA")
         elif isinstance(image_input, io.BytesIO):
@@ -141,8 +146,9 @@ class Interrogator:
         canvas.alpha_composite(image)
         image = canvas.convert("RGB")
 
+        # TODO remove because already square image
         image_shape = image.size
-        max_dim = max(image_shape)
+        max_dim = max(image_shape)  # 1024
         pad_left = (max_dim - image_shape[0]) // 2
         pad_top = (max_dim - image_shape[1]) // 2
 
@@ -150,18 +156,20 @@ class Interrogator:
         padded_image.paste(image, (pad_left, pad_top))
 
         if max_dim != target_size:
-            padded_image = padded_image.resize((target_size, target_size), Image.BICUBIC)
+            padded_image = padded_image.resize((target_size, target_size), Image.BICUBIC)  # TODO use wand or numpy
 
+        # TODO make flip image from numpy
         image_array = np.asarray(padded_image, dtype=np.float32)
         image_array = image_array[:, :, ::-1]
 
-        return np.expand_dims(image_array, axis=0)
+        return np.expand_dims(image_array, axis=0) # TODO return normal and flipped image
 
     def predict(self, image_input, general_thresh, character_thresh):
+        #TODO recive normal and fliped image stats
         image = self.prepare_image(image_input)
 
-        input_name = self.model.get_inputs()[0].name
-        label_name = self.model.get_outputs()[0].name
+        input_name = self.model.get_inputs()[0].name  # TODO move to class
+        label_name = self.model.get_outputs()[0].name  # TODO move to class
         preds = self.model.run([label_name], {input_name: image})[0]
 
         labels = list(zip(self.tag_names, preds[0].astype(float)))
