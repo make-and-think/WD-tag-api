@@ -9,3 +9,4 @@ async def auth_token(user_token: Annotated[str | None, Header()]):
     return user_token in tokens
     # use value from settings
     # TODO later use database like row by id or move to web server condition
+ 
