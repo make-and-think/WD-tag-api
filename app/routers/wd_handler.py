@@ -27,6 +27,7 @@ def is_square_webp(image_io: io.BytesIO) -> bool:
     except Exception:
         return False
 
+
 def convert_to_square_webp(image_io: io.BytesIO, target_size: int = 1024, quality: int = 100) -> io.BytesIO:
     with Image(blob=image_io.getvalue()) as img:
         max_size = max(img.width, img.height)
@@ -47,14 +48,17 @@ def convert_to_square_webp(image_io: io.BytesIO, target_size: int = 1024, qualit
             output_io.seek(0)
             return output_io
 
+
 def get_interrogator():
     interrogator = Interrogator()
     interrogator.load_model(SWINV2_MODEL_DSV3_REPO)  # TODO load from config by name
     return interrogator
 
+
 async def read_image_as_bytesio(image: UploadFile) -> io.BytesIO:
     content = await image.read()
     return io.BytesIO(content)
+
 
 @router.put("/rating")
 async def return_rating(
@@ -62,12 +66,13 @@ async def return_rating(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-    
+
     if not is_square_webp(image_io):
         raise HTTPException(status_code=400, detail="Only square WEBP images are allowed")
-    
+
     ratings, _, _ = interrogator.predict(image_io, general_thresh=0.35, character_thresh=0.35)
     return {"ratings": {rating: float(score) for rating, score in ratings}}
+
 
 @router.put("/tags")
 async def return_tags(
@@ -75,14 +80,15 @@ async def return_tags(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-    
+
     if not is_square_webp(image_io):
         raise HTTPException(status_code=400, detail="Only square WEBP images are allowed")
-    
+
     _, general_tags, character_tags = interrogator.predict(image_io, general_thresh=0.35, character_thresh=0.35)
     return {
         "general_tags": {tag: float(score) for tag, score in general_tags},
     }
+
 
 @router.put("/all")
 async def return_all(
@@ -90,15 +96,16 @@ async def return_all(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-    
+
     if not is_square_webp(image_io):
         raise HTTPException(status_code=400, detail="Only square WEBP images are allowed")
-    
+
     ratings, general_tags, character_tags = interrogator.predict(image_io, general_thresh=0.35, character_thresh=0.35)
     return {
         "ratings": {rating: float(score) for rating, score in ratings},
         "general_tags": {tag: float(score) for tag, score in general_tags},
     }
+
 
 @router.put("/debug_convert")
 async def debug_convert(image: UploadFile = File(...)):
