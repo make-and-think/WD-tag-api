@@ -159,7 +159,6 @@ class Interrogator:
         image_array = np.asarray(padded_image, dtype=np.float32)
         image_array = image_array[:, :, ::-1]
 
-        print(np.expand_dims(image_array,axis=0))
         return np.expand_dims(image_array, axis=0)
 
     def predict(self, image_input, general_thresh, character_thresh):
