@@ -7,7 +7,7 @@ from ..internal.Interrogator import Interrogator, SWINV2_MODEL_DSV3_REPO
 from ..dependencies import auth_token
 import io
 import numpy as np
-from PIL import Image
+from wand.image import Image
 
 router = APIRouter(prefix="/wd_tagger")
 
@@ -22,28 +22,30 @@ router = APIRouter(prefix="/wd_tagger")
 
 def is_square_webp(image_io: io.BytesIO) -> bool:
     try:
-        with Image.open(image_io) as img:
+        with Image(blob=image_io.getvalue()) as img:
             return img.format == 'WEBP' and img.width == img.height
     except Exception:
         return False
 
 def convert_to_square_webp(image_io: io.BytesIO, target_size: int = 1024, quality: int = 100) -> io.BytesIO:
-    with Image.open(image_io) as img:
-
+    with Image(blob=image_io.getvalue()) as img:
         max_size = max(img.width, img.height)
-        new_img = Image.new('RGB', (max_size, max_size), (255, 255, 255))
-        
-        # paste image to white square
-        paste_x = (max_size - img.width) // 2
-        paste_y = (max_size - img.height) // 2
-        new_img.paste(img, (paste_x, paste_y))
-        
-        img_resized = new_img.resize((target_size, target_size), Image.LANCZOS)
-        
-        output_io = io.BytesIO()
-        img_resized.save(output_io, format='WEBP', quality=quality)
-        output_io.seek(0)
-        return output_io
+        with Image(width=max_size, height=max_size, background='white') as new_img:
+            # Paste original image to the center of the white square
+            paste_x = (max_size - img.width) // 2
+            paste_y = (max_size - img.height) // 2
+            new_img.composite(img, left=paste_x, top=paste_y)
+            
+            # Resize to target size
+            new_img.resize(target_size, target_size, filter='cubic')
+            
+            new_img.format = 'webp'
+            new_img.compression_quality = quality
+            
+            output_io = io.BytesIO()
+            new_img.save(file=output_io)
+            output_io.seek(0)
+            return output_io
 
 def get_interrogator():
     interrogator = Interrogator()

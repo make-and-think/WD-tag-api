@@ -2,11 +2,11 @@ import numpy as np
 import onnxruntime as rt
 import pandas as pd
 import random
-from PIL import Image
 from huggingface_hub import hf_hub_download
 import os
 import shutil
 import io
+from wand.image import Image
 
 # Dataset v3 series of models:
 SWINV2_MODEL_DSV3_REPO = "SmilingWolf/wd-swinv2-tagger-v3"
@@ -43,7 +43,6 @@ kaomojis = [
 
 
 def load_labels(dataframe) -> list[str]:
-    # TODO use https://docs.python.org/3/library/csv.html
     name_series = dataframe["name"]
     name_series = name_series.map(
         lambda x: x.replace("_", " ") if x not in kaomojis else x
@@ -98,6 +97,7 @@ class Interrogator:
             return
 
         csv_path, model_path = self.download_model(model_repo)
+        # TODO use https://docs.python.org/3/library/csv.html
         tags_df = pd.read_csv(csv_path)
         sep_tags = load_labels(tags_df)
 
@@ -120,19 +120,30 @@ class Interrogator:
         self.last_loaded_repo = model_repo
 
     def prepare_image(self, image_input):
-        # TODO replace Pillow with this https://docs.wand-py.org
-
-        if isinstance(image_input, str):
-            image = Image.open(image_input).convert("RGBA")
-        elif isinstance(image_input, io.BytesIO):
-            image = Image.open(image_input).convert("RGBA")
+        if isinstance(image_input, io.BytesIO):
+            if image_input.getbuffer().nbytes == 0:
+                raise ValueError("Empty BytesIO object provided")
+            image_input.seek(0)
+            try:
+                with Image(blob=image_input.getvalue()) as img:
+                    image = img.clone()
+            except Exception as e:
+                raise ValueError(f"Error reading image from BytesIO: {str(e)}")
+        elif isinstance(image_input, str):
+            if not os.path.exists(image_input):
+                raise ValueError(f"Image file not found: {image_input}")
+            with Image(filename=image_input) as img:
+                image = img.clone()
         elif isinstance(image_input, np.ndarray):
             if image_input.dtype != np.uint8:
                 raise ValueError("NumPy array must be of type uint8")
             if image_input.ndim == 2:  # Grayscale
-                image = Image.fromarray(image_input, mode='L').convert("RGBA")
+                with Image.from_array(image_input) as img:
+                    image = img.clone()
+                    image.type = 'grayscale'
             elif image_input.ndim == 3 and image_input.shape[2] in [3, 4]:  # RGB or RGBA
-                image = Image.fromarray(image_input, mode='RGBA' if image_input.shape[2] == 4 else 'RGB')
+                with Image.from_array(image_input) as img:
+                    image = img.clone()
             else:
                 raise ValueError("Unsupported NumPy array shape")
         else:
@@ -140,26 +151,39 @@ class Interrogator:
 
         target_size = self.model_target_size
 
-        canvas = Image.new("RGBA", image.size, (255, 255, 255))
-        canvas.alpha_composite(image)
-        image = canvas.convert("RGB")
+        # Ensure the image has an alpha channel
+        if image.alpha_channel:
+            image.alpha_channel = 'remove'
+        
+        # Create a white background and composite the image over it
+        with Image(width=image.width, height=image.height, background='white') as background:
+            background.composite(image, 0, 0)
+            image = background.clone()
 
-        # TODO remove because already square image
-        image_shape = image.size
-        max_dim = max(image_shape)  # 1024
-        pad_left = (max_dim - image_shape[0]) // 2
-        pad_top = (max_dim - image_shape[1]) // 2
+        # Make the image square by padding
+        max_dim = max(image.width, image.height)
+        pad_left = (max_dim - image.width) // 2
+        pad_top = (max_dim - image.height) // 2
 
-        padded_image = Image.new("RGB", (max_dim, max_dim), (255, 255, 255))
-        padded_image.paste(image, (pad_left, pad_top))
+        with Image(width=max_dim, height=max_dim, background='white') as padded_image:
+            padded_image.composite(image, left=pad_left, top=pad_top)
+            image = padded_image.clone()
 
+        # Resize if necessary
         if max_dim != target_size:
-            padded_image = padded_image.resize((target_size, target_size), Image.BICUBIC)  # TODO use wand or numpy
+            image.resize(target_size, target_size, filter='cubic')
 
-        image_array = np.asarray(padded_image, dtype=np.float32)
+        # Convert to numpy array
+        image_array = np.array(image)
+        
+        # Ensure the image is in RGB format
+        if image_array.shape[2] > 3:
+            image_array = image_array[:, :, :3]
+        
+        # Convert RGB to BGR
         image_array = image_array[:, :, ::-1]
 
-        return np.expand_dims(image_array, axis=0)
+        return np.expand_dims(image_array, axis=0).astype(np.float32)
 
     def predict(self, image_input, general_thresh, character_thresh):
         if isinstance(image_input, np.ndarray) and image_input.ndim == 4:
