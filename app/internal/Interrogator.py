@@ -121,8 +121,6 @@ class Interrogator:
 
     def prepare_image(self, image_input):
         # TODO replace Pillow with this https://docs.wand-py.org
-        # TODO makle directly numpy array
-        # TODO flip image in numpy
 
         if isinstance(image_input, str):
             image = Image.open(image_input).convert("RGBA")
@@ -158,15 +156,17 @@ class Interrogator:
         if max_dim != target_size:
             padded_image = padded_image.resize((target_size, target_size), Image.BICUBIC)  # TODO use wand or numpy
 
-        # TODO make flip image from numpy
         image_array = np.asarray(padded_image, dtype=np.float32)
         image_array = image_array[:, :, ::-1]
 
-        return np.expand_dims(image_array, axis=0) # TODO return normal and flipped image
+        print(np.expand_dims(image_array,axis=0))
+        return np.expand_dims(image_array, axis=0)
 
     def predict(self, image_input, general_thresh, character_thresh):
-        #TODO recive normal and fliped image stats
-        image = self.prepare_image(image_input)
+        if isinstance(image_input, np.ndarray) and image_input.ndim == 4:
+            image = image_input
+        else:
+            image = self.prepare_image(image_input)
 
         input_name = self.model.get_inputs()[0].name  # TODO move to class
         label_name = self.model.get_outputs()[0].name  # TODO move to class
