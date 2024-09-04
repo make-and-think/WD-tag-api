@@ -3,7 +3,7 @@ import glob
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
-from ..internal.Interrogator import Interrogator, SWINV2_MODEL_DSV3_REPO
+from ..internal.interrogator import Interrogator, SWINV2_MODEL_DSV3_REPO
 from ..dependencies import auth_token
 import io
 import numpy as np
@@ -21,6 +21,8 @@ router = APIRouter(prefix="/wd_tagger")
 
 
 def is_square_webp(image_io: io.BytesIO) -> bool:
+    #TODO logic prepare_image form interrogator need has been here
+    #TODO resize image to model req size
     try:
         with Image(blob=image_io.getvalue()) as img:
             return img.format == 'WEBP' and img.width == img.height
@@ -29,6 +31,7 @@ def is_square_webp(image_io: io.BytesIO) -> bool:
 
 
 def convert_to_square_webp(image_io: io.BytesIO, target_size: int = 1024, quality: int = 100) -> io.BytesIO:
+    # TODO call form is_square_webp if in config enable
     with Image(blob=image_io.getvalue()) as img:
         max_size = max(img.width, img.height)
         with Image(width=max_size, height=max_size, background='white') as new_img:
@@ -42,7 +45,6 @@ def convert_to_square_webp(image_io: io.BytesIO, target_size: int = 1024, qualit
             
             new_img.format = 'webp'
             new_img.compression_quality = quality
-            
             output_io = io.BytesIO()
             new_img.save(file=output_io)
             output_io.seek(0)
@@ -96,7 +98,7 @@ async def return_all(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-
+    #TODO return wand.Image or False
     if not is_square_webp(image_io):
         raise HTTPException(status_code=400, detail="Only square WEBP images are allowed")
 

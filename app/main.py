@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from .routers import wd_handler
-from .internal.Interrogator import Interrogator, SWINV2_MODEL_DSV3_REPO
+from .internal.interrogator import Interrogator, SWINV2_MODEL_DSV3_REPO
 
 app = FastAPI()
 
