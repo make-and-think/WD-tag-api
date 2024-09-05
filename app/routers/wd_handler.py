@@ -8,6 +8,7 @@ from ..dependencies import auth_token
 import io
 import numpy as np
 from wand.image import Image
+from typing import Union
 
 router = APIRouter(prefix="/wd_tagger")
 
@@ -20,12 +21,20 @@ router = APIRouter(prefix="/wd_tagger")
 # https://github.com/Taruu/nude-check-tests/blob/286f1c7b12cecd5b26efbd59897f383d9cce0402/wdv3_jax_worker.py#L291
 
 
-def is_square_webp(image_io: io.BytesIO) -> bool:
-    #TODO logic prepare_image form interrogator need has been here
-    #TODO resize image to model req size
+def is_square_webp_and_prepare(image_io: io.BytesIO, interrogator: Interrogator) -> Union[np.ndarray, bool]:
     try:
         with Image(blob=image_io.getvalue()) as img:
-            return img.format == 'WEBP' and img.width == img.height
+            is_webp = img.format == 'WEBP'
+            
+            # Check if the input image is square
+            width, height = img.size
+            is_square = width == height
+
+        if is_webp and is_square:
+            prepared_image = interrogator.prepare_image(image_io)
+            return prepared_image
+        else:
+            return False
     except Exception:
         return False
 
@@ -56,11 +65,9 @@ def get_interrogator():
     interrogator.load_model(SWINV2_MODEL_DSV3_REPO)  # TODO load from config by name
     return interrogator
 
-
 async def read_image_as_bytesio(image: UploadFile) -> io.BytesIO:
     content = await image.read()
     return io.BytesIO(content)
-
 
 @router.put("/rating")
 async def return_rating(
@@ -68,13 +75,12 @@ async def return_rating(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-
-    if not is_square_webp(image_io):
-        raise HTTPException(status_code=400, detail="Only square WEBP images are allowed")
-
-    ratings, _, _ = interrogator.predict(image_io, general_thresh=0.35, character_thresh=0.35)
+    prepared_image = is_square_webp_and_prepare(image_io, interrogator)
+    if not isinstance(prepared_image, np.ndarray):
+        raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
+    
+    ratings, _, _ = interrogator.predict(prepared_image, general_thresh=0.35, character_thresh=0.35)
     return {"ratings": {rating: float(score) for rating, score in ratings}}
-
 
 @router.put("/tags")
 async def return_tags(
@@ -82,15 +88,14 @@ async def return_tags(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-
-    if not is_square_webp(image_io):
-        raise HTTPException(status_code=400, detail="Only square WEBP images are allowed")
-
-    _, general_tags, character_tags = interrogator.predict(image_io, general_thresh=0.35, character_thresh=0.35)
+    prepared_image = is_square_webp_and_prepare(image_io, interrogator)
+    if not isinstance(prepared_image, np.ndarray):
+        raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
+    
+    _, general_tags, character_tags = interrogator.predict(prepared_image, general_thresh=0.35, character_thresh=0.35)
     return {
         "general_tags": {tag: float(score) for tag, score in general_tags},
     }
-
 
 @router.put("/all")
 async def return_all(
@@ -98,16 +103,15 @@ async def return_all(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-    #TODO return wand.Image or False
-    if not is_square_webp(image_io):
-        raise HTTPException(status_code=400, detail="Only square WEBP images are allowed")
-
-    ratings, general_tags, character_tags = interrogator.predict(image_io, general_thresh=0.35, character_thresh=0.35)
+    prepared_image = is_square_webp_and_prepare(image_io, interrogator)
+    if not isinstance(prepared_image, np.ndarray):
+        raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
+    
+    ratings, general_tags, character_tags = interrogator.predict(prepared_image, general_thresh=0.35, character_thresh=0.35)
     return {
         "ratings": {rating: float(score) for rating, score in ratings},
         "general_tags": {tag: float(score) for tag, score in general_tags},
     }
-
 
 @router.put("/debug_convert")
 async def debug_convert(image: UploadFile = File(...)):
