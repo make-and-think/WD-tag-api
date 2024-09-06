@@ -23,7 +23,7 @@ router = APIRouter(prefix="/wd_tagger")
 
 
 def image_prepare(image_io: io.BytesIO, target_size: int) -> Union[np.ndarray, bool]:
-    if magic.from_buffer(image_io.read(1024)) != "image/webp":
+    if magic.from_buffer(image_io.read(1024), mime=True) != "image/webp":
         return False
     image_obj = Image(blob=image_io.getvalue())
     width, height = image_obj.size
@@ -64,7 +64,7 @@ async def return_rating(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-    prepared_image = image_prepare(image_io, interrogator)
+    prepared_image = image_prepare(image_io, interrogator.model_target_size)
     if not isinstance(prepared_image, np.ndarray):
         raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
 
@@ -78,7 +78,7 @@ async def return_tags(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-    prepared_image = image_prepare(image_io, interrogator)
+    prepared_image = image_prepare(image_io, interrogator.model_target_size)
     if not isinstance(prepared_image, np.ndarray):
         raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
 
@@ -94,7 +94,7 @@ async def return_all(
         interrogator: Interrogator = Depends(get_interrogator)
 ):
     image_io = await read_image_as_bytesio(image)
-    prepared_image = image_prepare(image_io, interrogator)
+    prepared_image = image_prepare(image_io, interrogator.model_target_size)
     if not isinstance(prepared_image, np.ndarray):
         raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
 
