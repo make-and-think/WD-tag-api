@@ -15,6 +15,14 @@ VIT_MODEL_DSV3_REPO = "SmilingWolf/wd-vit-tagger-v3"
 VIT_LARGE_MODEL_DSV3_REPO = "SmilingWolf/wd-vit-large-tagger-v3"
 EVA02_LARGE_MODEL_DSV3_REPO = "SmilingWolf/wd-eva02-large-tagger-v3"
 
+MODEL_MAPPING = {
+    "SWINV2_MODEL_DSV3_REPO": SWINV2_MODEL_DSV3_REPO,
+    "CONV_MODEL_DSV3_REPO": CONV_MODEL_DSV3_REPO,
+    "VIT_MODEL_DSV3_REPO": VIT_MODEL_DSV3_REPO,
+    "VIT_LARGE_MODEL_DSV3_REPO": VIT_LARGE_MODEL_DSV3_REPO,
+    "EVA02_LARGE_MODEL_DSV3_REPO": EVA02_LARGE_MODEL_DSV3_REPO
+}
+
 # Files to download from the repos
 MODEL_FILENAME = "model.onnx"
 LABEL_FILENAME = "selected_tags.csv"

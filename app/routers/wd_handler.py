@@ -1,7 +1,7 @@
 import os
 import glob
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import StreamingResponse
 from ..internal.interrogator import Interrogator, SWINV2_MODEL_DSV3_REPO
 from ..dependencies import auth_token
@@ -9,6 +9,7 @@ import io
 import numpy as np
 from wand.image import Image
 from typing import Union
+
 
 router = APIRouter(prefix="/wd_tagger")
 
@@ -60,10 +61,8 @@ def convert_to_square_webp(image_io: io.BytesIO, target_size: int = 1024, qualit
             return output_io
 
 
-def get_interrogator():
-    interrogator = Interrogator()
-    interrogator.load_model(SWINV2_MODEL_DSV3_REPO)  # TODO load from config by name
-    return interrogator
+def get_interrogator(request: Request):
+    return request.app.state.interrogator
 
 async def read_image_as_bytesio(image: UploadFile) -> io.BytesIO:
     content = await image.read()

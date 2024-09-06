@@ -33,3 +33,9 @@ logger.info("Starting...")
 logger.info("Configuration Initialization...")
 
 tokens = values.get("auth.tokens")
+
+def get_model_settings():
+    return {
+        "available_models": values.get("models.available"),
+        "default_model": values.get("models.default")
+    }

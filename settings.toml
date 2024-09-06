@@ -6,3 +6,13 @@ format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> [<bold>{level.icon}<level>{l
 rotation = "1 day"
 enqueue = "True"
 colorize = "True"
+
+[models]
+available = [
+    "SWINV2_MODEL_DSV3_REPO",
+    "CONV_MODEL_DSV3_REPO",
+    "VIT_MODEL_DSV3_REPO",
+    "VIT_LARGE_MODEL_DSV3_REPO",
+    "EVA02_LARGE_MODEL_DSV3_REPO"
+]
+default = "SWINV2_MODEL_DSV3_REPO"
