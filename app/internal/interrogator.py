@@ -84,11 +84,14 @@ class Interrogator:
         self.last_loaded_model = None
 
     def download_model(self, model_repo):
-        os.makedirs("models", exist_ok=True)
+        model_name = next(key for key, value in MODEL_MAPPING.items() if value == model_repo)
+        model_dir = os.path.join("models", model_name)
+        os.makedirs(model_dir, exist_ok=True)
+        
         csv_filename = LABEL_FILENAME
         model_filename = MODEL_FILENAME
-        csv_path = os.path.join("models", csv_filename)
-        model_path = os.path.join("models", model_filename)
+        csv_path = os.path.join(model_dir, csv_filename)
+        model_path = os.path.join(model_dir, model_filename)
 
         if not os.path.exists(csv_path):
             csv_path_remote = hf_hub_download(repo_id=model_repo, filename=LABEL_FILENAME)
@@ -100,7 +103,12 @@ class Interrogator:
 
         return csv_path, model_path
 
-    def load_model(self, model_repo):
+    def load_model(self, model_name):
+        if model_name not in MODEL_MAPPING:
+            raise ValueError(f"Unknown model: {model_name}")
+        
+        model_repo = MODEL_MAPPING[model_name]
+        
         if model_repo == self.last_loaded_repo:
             return
 
