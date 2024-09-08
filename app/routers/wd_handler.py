@@ -1,17 +1,32 @@
 import os
 import glob
+from contextlib import asynccontextmanager
 
 import magic
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import StreamingResponse
-from ..internal.interrogator import Interrogator, SWINV2_MODEL_DSV3_REPO
+from ..internal.interrogator import Interrogator
 from ..dependencies import auth_token
 import io
 import numpy as np
 from wand.image import Image
 from typing import Union
+from ..config import model_repo, allow_all_images, logger
 
-router = APIRouter(prefix="/wd_tagger")
+
+@asynccontextmanager
+async def lifespan(app: APIRouter):
+    # Load the ML model
+    logger.info(f"Start load the ML model {model_repo}")
+    app.state.interrogator = Interrogator()
+    app.state.interrogator.load_model(model_repo)
+    yield
+    # Clean up the ML models and release the resources
+    logger.info("Unload model")
+    del app.state.interrogator
+
+
+router = APIRouter(prefix="/wd_tagger", lifespan=lifespan)
 
 
 # We recive image from numpy
@@ -23,13 +38,15 @@ router = APIRouter(prefix="/wd_tagger")
 
 
 def image_prepare(image_io: io.BytesIO, target_size: int) -> Union[np.ndarray, bool]:
-    if magic.from_buffer(image_io.read(1024), mime=True) != "image/webp":
-        return False
+    if not allow_all_images and magic.from_buffer(image_io.read(1024), mime=True) != "image/webp":
+        raise HTTPException(status_code=400, detail="Image must be in WebP format")
+
     image_obj = Image(blob=image_io.getvalue())
     width, height = image_obj.size
-    if width != height:
-        return False
-    if image_obj.size != (target_size, target_size):
+    if not allow_all_images and (width != height):
+        raise HTTPException(status_code=400, detail="Image must be square")
+
+    if allow_all_images or (image_obj.size != (target_size, target_size)):
         image_obj.resize(target_size, target_size, filter='cubic')
 
     if image_obj.alpha_channel:
@@ -65,8 +82,6 @@ async def return_rating(
 ):
     image_io = await read_image_as_bytesio(image)
     prepared_image = image_prepare(image_io, interrogator.model_target_size)
-    if not isinstance(prepared_image, np.ndarray):
-        raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
 
     ratings, _, _ = interrogator.predict(prepared_image, general_thresh=0.35, character_thresh=0.35)
     return {"ratings": {rating: float(score) for rating, score in ratings}}
@@ -79,8 +94,6 @@ async def return_tags(
 ):
     image_io = await read_image_as_bytesio(image)
     prepared_image = image_prepare(image_io, interrogator.model_target_size)
-    if not isinstance(prepared_image, np.ndarray):
-        raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
 
     _, general_tags, character_tags = interrogator.predict(prepared_image, general_thresh=0.35, character_thresh=0.35)
     return {
@@ -95,8 +108,6 @@ async def return_all(
 ):
     image_io = await read_image_as_bytesio(image)
     prepared_image = image_prepare(image_io, interrogator.model_target_size)
-    if not isinstance(prepared_image, np.ndarray):
-        raise HTTPException(status_code=400, detail="Image must be square and in WebP format")
 
     ratings, general_tags, character_tags = interrogator.predict(prepared_image, general_thresh=0.35,
                                                                  character_thresh=0.35)
@@ -104,10 +115,3 @@ async def return_all(
         "ratings": {rating: float(score) for rating, score in ratings},
         "general_tags": {tag: float(score) for tag, score in general_tags},
     }
-
-
-@router.put("/debug_convert")
-async def debug_convert(image: UploadFile = File(...)):
-    image_io = await read_image_as_bytesio(image)
-    converted_io = convert_to_square_webp(image_io)
-    return StreamingResponse(converted_io, media_type="image/webp")

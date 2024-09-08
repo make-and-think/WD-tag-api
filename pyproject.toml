@@ -18,6 +18,7 @@ wand = "^0.6.13"
 python-magic = "^0.4.27"
 pandas = "^2.2.2"
 python-multipart = "^0.0.9"
+onnxruntime-gpu = "^1.19.2"
 
 
 [build-system]

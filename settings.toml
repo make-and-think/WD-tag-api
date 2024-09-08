@@ -8,11 +8,6 @@ enqueue = "True"
 colorize = "True"
 
 [models]
-available = [
-    "SWINV2_MODEL_DSV3_REPO",
-    "CONV_MODEL_DSV3_REPO",
-    "VIT_MODEL_DSV3_REPO",
-    "VIT_LARGE_MODEL_DSV3_REPO",
-    "EVA02_LARGE_MODEL_DSV3_REPO"
-]
+execution_provider = "CPUExecutionProvider"
 default = "SWINV2_MODEL_DSV3_REPO"
+allow_all_images = true
