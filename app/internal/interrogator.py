@@ -7,6 +7,7 @@ import os
 import shutil
 import io
 from wand.image import Image
+import csv
 from ..config import logger, execution_provider
 
 # Files to download from the repos
@@ -36,16 +37,28 @@ kaomojis = [
 ]
 
 
-def load_labels(dataframe) -> list[str]:
-    name_series = dataframe["name"]
-    name_series = name_series.map(
-        lambda x: x.replace("_", " ") if x not in kaomojis else x
-    )
-    tag_names = name_series.tolist()
+def load_labels(file) -> list[str]:
+    
+    with open(file, "r", encoding="utf-8", newline='') as csv_csv:
+        reader = csv.DictReader(csv_csv)
+        rows = list(reader)
+    
+    names = []
+    categories = []
 
-    rating_indexes = list(np.where(dataframe["category"] == 9)[0])
-    general_indexes = list(np.where(dataframe["category"] == 0)[0])
-    character_indexes = list(np.where(dataframe["category"] == 4)[0])
+    for row in rows:
+        names.append(row["name"])
+        categories.append(int(row["category"]))
+
+    name_series = map(
+        lambda x: x.replace("_", " ") if x not in kaomojis else x, names
+    )
+    tag_names = list(name_series)
+
+    rating_indexes = list(np.where(np.array(categories) == 9)[0])
+    general_indexes = list(np.where(np.array(categories) == 0)[0])
+    character_indexes = list(np.where(np.array(categories) == 4)[0])
+
     return tag_names, rating_indexes, general_indexes, character_indexes
 
 
@@ -103,9 +116,8 @@ class Interrogator:
             return
 
         csv_path, model_path = self.download_model(model_repo)
-        # TODO use https://docs.python.org/3/library/csv.html
-        tags_df = pd.read_csv(csv_path)
-        sep_tags = load_labels(tags_df)
+
+        sep_tags = load_labels(csv_path)
 
         self.tag_names = sep_tags[0]
         self.rating_indexes = sep_tags[1]

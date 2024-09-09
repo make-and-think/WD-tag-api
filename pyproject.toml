@@ -2,7 +2,7 @@
 name = "wd-tag-api"
 version = "0.1.0"
 description = ""
-authors = ["Taruu <taruumax@gmail.com>"]
+authors = ["Taruu <taruumax@gmail.com>"] / i'm joke for you?
 readme = "README.md"
 
 [tool.poetry.dependencies]
