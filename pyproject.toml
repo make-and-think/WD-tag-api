@@ -2,11 +2,11 @@
 name = "wd-tag-api"
 version = "0.1.0"
 description = ""
-authors = ["Taruu <taruumax@gmail.com>"] / i'm joke for you?
+authors = ["Taruu <taruumax@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 fastapi = "^0.112.2"
 loguru = "^0.7.2"
 dynaconf = "^3.2.6"
@@ -16,7 +16,6 @@ onnxruntime = "^1.19.0"
 huggingface-hub = "^0.24.6"
 wand = "^0.6.13"
 python-magic = "^0.4.27"
-pandas = "^2.2.2"
 python-multipart = "^0.0.9"
 onnxruntime-gpu = "^1.19.2"
 
