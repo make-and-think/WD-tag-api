@@ -9,5 +9,5 @@ colorize = "True"
 
 [models]
 execution_provider = "CPUExecutionProvider"
-default = "SWINV2_MODEL_DSV3_REPO"
+default = "SWINV2_MODEL_DSV3_REPO_Quantized8"
 allow_all_images = true
