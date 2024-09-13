@@ -52,3 +52,4 @@ if model_name not in MODEL_MAPPING:
 model_repo = MODEL_MAPPING[model_name]
 allow_all_images = values.get("models.allow_all_images")
 execution_provider = values.get("models.execution_provider")
+process_pool_quantity = values.get("models.process_pool_quantity")

@@ -37,11 +37,10 @@ kaomojis = [
 
 
 def load_labels(file) -> list[str]:
-    
     with open(file, "r", encoding="utf-8", newline='') as csv_csv:
         reader = csv.DictReader(csv_csv)
         rows = list(reader)
-    
+
     names = []
     categories = []
 
@@ -88,7 +87,8 @@ class Interrogator:
         self.input_name = None
         self.label_name = None
 
-    def download_model(self, model_repo):
+    @staticmethod
+    def download_model(model_repo):
         model_dir = os.path.join("models", model_repo)
         os.makedirs(model_dir, exist_ok=True)
 
@@ -133,6 +133,8 @@ class Interrogator:
         self.input_name = self.model.get_inputs()[0].name
         self.label_name = self.model.get_outputs()[0].name
         logger.info(f"Loaded model: {model_repo}")
+        for inp in self.model.get_inputs():
+            logger.info(inp)
 
     def predict(self, image: np.ndarray, general_thresh, character_thresh):
 

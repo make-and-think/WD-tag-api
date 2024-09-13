@@ -8,6 +8,7 @@ enqueue = "True"
 colorize = "True"
 
 [models]
+process_pool_quantity = 1
 execution_provider = "CPUExecutionProvider"
-default = "SWINV2_MODEL_DSV3_REPO_Quantized8"
+default = "SWINV2_MODEL_DSV3_REPO"
 allow_all_images = true
