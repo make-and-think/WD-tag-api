@@ -11,7 +11,8 @@ MODEL_MAPPING = {
     "VIT_MODEL_DSV3_REPO": "SmilingWolf/wd-vit-tagger-v3",
     "VIT_LARGE_MODEL_DSV3_REPO": "SmilingWolf/wd-vit-large-tagger-v3",
     "EVA02_LARGE_MODEL_DSV3_REPO": "SmilingWolf/wd-eva02-large-tagger-v3",
-    "SWINV2_MODEL_DSV3_REPO_Quantized8": "Th3ro/wd-swinv2-tagger-v3-Q8"
+    "SWINV2_MODEL_DSV3_REPO_Q8": "Th3ro/wd-swinv2-tagger-v3-Q8",
+    "SWINV2_MODEL_DSV3_REPO_Q4": "Th3ro/swinv2-tagger-v3-Q4"
 }
 
 values = Dynaconf(
