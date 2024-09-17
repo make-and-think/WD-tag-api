@@ -5,7 +5,7 @@ from .config import model_repo, logger
 
 app = FastAPI()
 
-app.include_router(wd_handler.router)
+app.include_router(image_handler.router)
 
 
 @app.on_event("startup")
