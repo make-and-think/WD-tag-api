@@ -50,7 +50,12 @@ if model_name not in MODEL_MAPPING:
     logger.error(f"Model {model_name} is not available")
     raise ValueError(f"Model {model_name} is not available")
 
+# Model config
 model_repo = MODEL_MAPPING[model_name]
 allow_all_images = values.get("models.allow_all_images")
 execution_provider = values.get("models.execution_provider")
 process_pool_quantity = values.get("models.process_pool_quantity")
+onnx_thread_quantity = values.get("models.onnx_thread_quantity")
+
+# Auth config
+auth_tokens = values.get('auth.tokens')

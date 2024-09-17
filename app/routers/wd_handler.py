@@ -8,7 +8,7 @@ import magic
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import StreamingResponse
 from ..internal.interrogator import Interrogator
-from ..dependencies import auth_token
+from ..dependencies import auth_token, get_token_header
 import io
 import numpy as np
 from wand.image import Image
@@ -30,7 +30,7 @@ async def lifespan(app: APIRouter):
     del app.state.interrogator
 
 
-router = APIRouter(prefix="/wd_tagger", lifespan=lifespan)
+router = APIRouter(prefix="/wd_tagger", lifespan=lifespan, dependencies=[Depends(get_token_header)],)
 process_pool = ProcessPoolExecutor(process_pool_quantity)
 
 
@@ -47,9 +47,7 @@ def image_prepare(image_io: io.BytesIO, target_size: int) -> Union[np.ndarray, b
         raise HTTPException(status_code=400, detail="Image must be in WebP format")
 
     image_obj = Image(blob=image_io.getvalue())
-    print(type(image_obj.size))
     width, height = image_obj.size
-    print(width, type(width))
     if not allow_all_images and (width != height):
         raise HTTPException(status_code=400, detail="Image must be square")
 
@@ -78,10 +76,11 @@ async def read_image_as_bytesio(image: UploadFile) -> io.BytesIO:
 
 def _image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
     """CPU bound image predict"""
-    print(wd_interrogator.model_target_size)
+    logger.debug(f"Start predict image: {hash(image_file)}")
     prepared_image = image_prepare(image_file, wd_interrogator.model_target_size)
     ratings, general_tags, character_tags = wd_interrogator.predict(prepared_image, general_thresh=0.35,
                                                                     character_thresh=0.35)
+    logger.debug(f"End predict image: {hash(image_file)}")
     return ratings, general_tags, character_tags
 
 

@@ -7,7 +7,7 @@ import shutil
 import io
 from wand.image import Image
 import csv
-from ..config import logger, execution_provider
+from ..config import logger, execution_provider, onnx_thread_quantity
 
 # Files to download from the repos
 MODEL_FILENAME = "model.onnx"
@@ -125,7 +125,10 @@ class Interrogator:
 
         providers = list({execution_provider, 'CPUExecutionProvider'})
 
-        self.model = rt.InferenceSession(model_path, providers=providers)
+        session_options = rt.SessionOptions()
+        session_options.inter_op_num_threads = onnx_thread_quantity
+
+        self.model = rt.InferenceSession(model_path, providers=providers, session_options=session_options)
         _, height, width, _ = self.model.get_inputs()[0].shape
         self.model_target_size = height
 
