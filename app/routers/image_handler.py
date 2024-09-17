@@ -13,7 +13,7 @@ import io
 import numpy as np
 from wand.image import Image
 from typing import Union, Tuple, Any
-from ..config import model_repo, allow_all_images, process_pool_quantity, logger
+from ..config import model_repo, allow_all_images, process_pool_quantity, logger, auth_tokens
 
 wd_interrogator = Interrogator()
 
@@ -30,7 +30,11 @@ async def lifespan(app: APIRouter):
     del app.state.interrogator
 
 
-router = APIRouter(prefix="/wd_tagger", lifespan=lifespan, dependencies=[Depends(get_token_header)],)
+dependencies_list = []
+if auth_tokens:
+    dependencies_list.append(Depends(get_token_header))
+
+router = APIRouter(prefix="/wd_tagger", lifespan=lifespan, dependencies=dependencies_list)
 process_pool = ProcessPoolExecutor(process_pool_quantity)
 
 
