@@ -15,24 +15,23 @@ from wand.image import Image
 from typing import Union, Tuple, Any
 from ..config import model_repo, allow_all_images, process_pool_quantity, logger
 
-def create_interrogator():
-    interrogator = Interrogator()
-    interrogator.load_model(model_repo)
-    return interrogator
+wd_interrogator = Interrogator()
 
 
 @asynccontextmanager
 async def lifespan(app: APIRouter):
     # Load the ML model
     logger.info(f"Start load the ML model {model_repo}")
+    app.state.interrogator = wd_interrogator
+    app.state.interrogator.load_model(model_repo)
     yield
     # Clean up the ML models and release the resources
     logger.info("Unload model")
-
+    del app.state.interrogator
 
 
 router = APIRouter(prefix="/wd_tagger", lifespan=lifespan)
-process_pool = ProcessPoolExecutor(max_workers=process_pool_quantity)
+process_pool = ProcessPoolExecutor(process_pool_quantity)
 
 
 # We recive image from numpy
@@ -79,20 +78,16 @@ async def read_image_as_bytesio(image: UploadFile) -> io.BytesIO:
 
 def _image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
     """CPU bound image predict"""
-    interrogator = create_interrogator()
-    prepared_image = image_prepare(image_file, interrogator.model_target_size)
-    ratings, general_tags, character_tags = interrogator.predict(prepared_image, general_thresh=0.35,
-                                                                 character_thresh=0.35)
+    print(wd_interrogator.model_target_size)
+    prepared_image = image_prepare(image_file, wd_interrogator.model_target_size)
+    ratings, general_tags, character_tags = wd_interrogator.predict(prepared_image, general_thresh=0.35,
+                                                                    character_thresh=0.35)
     return ratings, general_tags, character_tags
 
 
 async def image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
     loop = asyncio.get_event_loop()
-    try:
-        return await loop.run_in_executor(process_pool, _image_predict, image_file)
-    except Exception as e:
-        logger.error(f"Error during image prediction: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error during image processing")
+    return await loop.run_in_executor(process_pool, _image_predict, image_file)
 
 
 @router.put("/rating")

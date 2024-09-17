@@ -8,7 +8,6 @@ import io
 from wand.image import Image
 import csv
 from ..config import logger, execution_provider
-import multiprocessing
 
 # Files to download from the repos
 MODEL_FILENAME = "model.onnx"
@@ -110,10 +109,8 @@ class Interrogator:
 
         return csv_path, model_path
 
-    import multiprocessing
-    import onnxruntime as rt
-
     def load_model(self, model_repo: str):
+
         if model_repo == self.last_loaded_repo:
             return
 
@@ -128,24 +125,7 @@ class Interrogator:
 
         providers = list({execution_provider, 'CPUExecutionProvider'})
 
-        session_options = rt.SessionOptions()
-
-        num_cores = multiprocessing.cpu_count()
-        session_options.intra_op_num_threads = num_cores
-        session_options.inter_op_num_threads = num_cores
-
-        logger.info(f"Using {num_cores} cores for inference")
-
-        try:
-            self.model = rt.InferenceSession(model_path, sess_options=session_options, providers=providers)
-        except Exception as e:
-            logger.error(f"Failed to load model: {e}")
-            raise
-
-        if self.model is None:
-            logger.error("Model failed to load")
-            raise RuntimeError("Model failed to load")
-
+        self.model = rt.InferenceSession(model_path, providers=providers)
         _, height, width, _ = self.model.get_inputs()[0].shape
         self.model_target_size = height
 
