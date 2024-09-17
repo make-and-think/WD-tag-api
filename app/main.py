@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from .routers import wd_handler
-from .internal.interrogator import Interrogator
+from .routers import image_handler
+from .internal.onnx_interrogator import Interrogator
 from .config import model_repo, logger
 
 app = FastAPI()

@@ -7,7 +7,7 @@ from concurrent.futures import ProcessPoolExecutor
 import magic
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import StreamingResponse
-from ..internal.interrogator import Interrogator
+from ..internal.onnx_interrogator import Interrogator
 from ..dependencies import auth_token, get_token_header
 import io
 import numpy as np
