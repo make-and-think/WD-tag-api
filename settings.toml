@@ -13,3 +13,19 @@ onnx_thread_quantity = 2
 execution_provider = "CPUExecutionProvider"
 default = "SWINV2_MODEL_DSV3_REPO"
 allow_all_images = true
+
+# Avialable execution providers:
+# - CPUExecutionProvider: for CPU execution
+# - CUDAExecutionProvider: for NVIDIA GPU execution
+# - ROCMExecutionProvider: for AMD GPU execution
+# - DirectMLExecutionProvider: for DirectX-compatible GPU execution
+# - OpenVINOExecutionProvider: for Intel devices execution
+
+# Avialable models:
+# - SWINV2_MODEL_DSV3_REPO
+# - CONV_MODEL_DSV3_REPO
+# - VIT_MODEL_DSV3_REPO
+# - VIT_LARGE_MODEL_DSV3_REPO
+# - EVA02_LARGE_MODEL_DSV3_REPO
+# - SWINV2_MODEL_DSV3_REPO_Q8
+# - SWINV2_MODEL_DSV3_REPO_Q4
