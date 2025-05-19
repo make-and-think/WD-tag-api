@@ -1,5 +1,6 @@
 import logging
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from inspect import currentframe
 
 from dynaconf import Dynaconf
@@ -57,6 +58,12 @@ execution_provider = values.get("models.execution_provider")
 process_pool_quantity = values.get("models.process_pool_quantity")
 onnx_thread_quantity = values.get("models.onnx_thread_quantity")
 
+# Database config
+database_host = values.get("cache_database.host")
+database_port = values.get("cache_database.port")
+database_password = values.get("cache_database.password")
+
 # Auth config
 auth_tokens = values.get('auth.tokens')
 
+process_pool = ProcessPoolExecutor(process_pool_quantity)

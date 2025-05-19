@@ -1,19 +1,20 @@
 import asyncio
-import os
-import glob
 from contextlib import asynccontextmanager
-from concurrent.futures import ProcessPoolExecutor
 
 import magic
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
-from fastapi.responses import StreamingResponse
+from PIL.Image import Resampling
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+
+from ..internal.cache_database import ImageCacheInterface
 from ..internal.onnx_interrogator import Interrogator
-from ..dependencies import auth_token, get_token_header
+from ..dependencies import get_token_header
 import io
 import numpy as np
-from wand.image import Image
-from typing import Union, Tuple, Any
-from ..config import model_repo, allow_all_images, process_pool_quantity, logger, auth_tokens
+from PIL import Image as pilImage
+from typing import Union, Any
+from ..config import model_repo, allow_all_images, logger, auth_tokens, process_pool, database_host, database_port, \
+    database_password
+from ..utils.images import calculate_image_hash
 
 wd_interrogator = Interrogator()
 
@@ -35,7 +36,11 @@ if auth_tokens:
     dependencies_list.append(Depends(get_token_header))
 
 router = APIRouter(prefix="/wd_tagger", lifespan=lifespan, dependencies=dependencies_list)
-process_pool = ProcessPoolExecutor(process_pool_quantity)
+print(database_host, database_port, database_password)
+if database_host:
+    database_worker = ImageCacheInterface(host=database_host, port=database_port, password=database_password)
+else:
+    database_worker = None
 
 
 # We recive image from numpy
@@ -50,16 +55,22 @@ def image_prepare(image_io: io.BytesIO, target_size: int) -> Union[np.ndarray, b
     if not allow_all_images and magic.from_buffer(image_io.read(1024), mime=True) != "image/webp":
         raise HTTPException(status_code=400, detail="Image must be in WebP format")
 
-    image_obj = Image(blob=image_io.getvalue())
+    # TODO check if another types use wandImage
+    # image_obj = wandImage(blob=image_io.getvalue())
+    image_obj = pilImage.open(image_io)
     width, height = image_obj.size
     if not allow_all_images and (width != height):
         raise HTTPException(status_code=400, detail="Image must be square")
 
     if allow_all_images or (image_obj.size != (target_size, target_size)):
-        image_obj.resize(target_size, target_size, filter='cubic')
+        image_obj = image_obj.resize((target_size, target_size), resample=Resampling.BICUBIC)
+        # image_obj.resize(target_size, target_size, filter='cubic')
 
-    if image_obj.alpha_channel:
-        image_obj.alpha_channel = 'remove'
+    # if image_obj.alpha_channel:
+    #     image_obj.alpha_channel = 'remove'
+
+    if image_obj.mode in ('RGBA', 'LA') or (image_obj.mode == 'P' and 'transparency' in image_obj.info):
+        image_obj = image_obj.convert("RGB")
 
     image_array = np.array(image_obj)
 
@@ -89,8 +100,18 @@ def _image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
 
 
 async def image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(process_pool, _image_predict, image_file)
+    image_data = None
+    if database_worker:  # TODO REPLACE WITH FUNC TO VARRRABLE
+        image_hash = await calculate_image_hash(image_file)
+        image_data = await database_worker.get_image(image_hash)
+
+    if not image_data:
+        loop = asyncio.get_event_loop()
+        image_data = await loop.run_in_executor(process_pool, _image_predict, image_file)
+        image_hash = await calculate_image_hash(image_file)
+        await database_worker.put_image(image_hash, dict(image_data))
+
+    return image_data
 
 
 @router.put("/rating")
@@ -98,6 +119,7 @@ async def return_rating(
         image: UploadFile = File(...)
 ):
     image_bytes = io.BytesIO(await image.read())
+
     ratings, _, _ = await image_predict(image_bytes)
     return {"ratings": {rating: float(score) for rating, score in ratings}}
 
