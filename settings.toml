@@ -9,7 +9,7 @@ colorize = "True"
 
 [models]
 process_pool_quantity = 1
-onnx_thread_quantity = 2
+onnx_thread_quantity = 1
 execution_provider = "CUDAExecutionProvider"
 default = "SWINV2_MODEL_DSV3_REPO"
 allow_all_images = true

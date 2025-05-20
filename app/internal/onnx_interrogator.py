@@ -124,12 +124,12 @@ class Interrogator:
         self.character_indexes = sep_tags[3]
 
         providers = list({execution_provider, 'CPUExecutionProvider'})
-
         session_options = rt.SessionOptions()
         session_options.inter_op_num_threads = onnx_thread_quantity
 
         self.model = rt.InferenceSession(model_path, providers=providers, session_options=session_options)
         _, height, width, _ = self.model.get_inputs()[0].shape
+        print("SHAPE", self.model.get_inputs()[0].shape)
         self.model_target_size = height
 
         self.last_loaded_repo = model_repo

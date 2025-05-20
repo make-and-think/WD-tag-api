@@ -92,6 +92,7 @@ async def read_image_as_bytesio(image: UploadFile) -> io.BytesIO:
 def _image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
     """CPU bound image predict"""
     logger.debug(f"Start predict image: {hash(image_file)}")
+    print("target size", wd_interrogator.model_target_size)
     prepared_image = image_prepare(image_file, wd_interrogator.model_target_size)
     ratings, general_tags, character_tags = wd_interrogator.predict(prepared_image, general_thresh=0.35,
                                                                     character_thresh=0.35)
@@ -107,8 +108,11 @@ async def image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
 
     if not image_data:
         loop = asyncio.get_event_loop()
+        print(process_pool, _image_predict, image_file)
         image_data = await loop.run_in_executor(process_pool, _image_predict, image_file)
-        image_hash = await calculate_image_hash(image_file)
+        if not image_hash:
+            image_hash = await calculate_image_hash(image_file)
+        print(image_hash, image_data)
         await database_worker.put_image(image_hash, dict(image_data))
 
     return image_data

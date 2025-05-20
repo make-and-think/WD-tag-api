@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from inspect import currentframe
@@ -66,4 +67,4 @@ database_password = values.get("cache_database.password")
 # Auth config
 auth_tokens = values.get('auth.tokens')
 
-process_pool = ProcessPoolExecutor(process_pool_quantity)
+process_pool = ProcessPoolExecutor(process_pool_quantity, mp_context=multiprocessing.get_context("spawn"))
