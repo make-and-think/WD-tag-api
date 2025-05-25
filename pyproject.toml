@@ -19,9 +19,9 @@ python-magic = "^0.4.27"
 python-multipart = "^0.0.9"
 pillow = "^11.2.1"
 xxhash = "^3.5.0"
-onnxruntime-gpu = "1.18.0"
 redis = "^6.1.0"
 numpy = "<2.0.0"
+onnxruntime-gpu = "^1.22.0"
 
 
 

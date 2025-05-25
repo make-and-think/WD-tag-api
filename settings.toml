@@ -8,11 +8,13 @@ enqueue = "True"
 colorize = "True"
 
 [models]
-process_pool_quantity = 1
-onnx_thread_quantity = 1
+process_pool_quantity = 10      #Used for image preprocessing and image hashing
+onnx_thread_quantity = 2        #Used to predict images
 execution_provider = "CUDAExecutionProvider"
 default = "SWINV2_MODEL_DSV3_REPO"
 allow_all_images = true
+general_thresh = 0.35
+character_thresh = 0.35
 
 # Avialable execution providers:
 # - CPUExecutionProvider: for CPU execution

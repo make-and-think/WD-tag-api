@@ -52,9 +52,6 @@ else:
 
 
 def image_prepare(image_io: io.BytesIO, target_size: int) -> Union[np.ndarray, bool]:
-    if not allow_all_images and magic.from_buffer(image_io.read(1024), mime=True) != "image/webp":
-        raise HTTPException(status_code=400, detail="Image must be in WebP format")
-
     # TODO check if another types use wandImage
     # image_obj = wandImage(blob=image_io.getvalue())
     image_obj = pilImage.open(image_io)
@@ -100,22 +97,49 @@ def _image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
     return ratings, general_tags, character_tags
 
 
-async def image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
+async def image_predict(image_file: io.BytesIO) -> dict:
     image_data = None
+    image_hash = None
     if database_worker:  # TODO REPLACE WITH FUNC TO VARRRABLE
         image_hash = await calculate_image_hash(image_file)
         image_data = await database_worker.get_image(image_hash)
 
-    if not image_data:
-        loop = asyncio.get_event_loop()
-        print(process_pool, _image_predict, image_file)
-        image_data = await loop.run_in_executor(process_pool, _image_predict, image_file)
-        if not image_hash:
-            image_hash = await calculate_image_hash(image_file)
-        print(image_hash, image_data)
+    if image_data:
+        return image_data
+
+    loop = asyncio.get_event_loop()
+    current_mimetype = magic.from_buffer(image_file.read(1024), mime=True)
+
+    if not allow_all_images and current_mimetype != "image/webp":
+        raise HTTPException(status_code=400, detail="Image must be in WebP format")
+    print(current_mimetype, allow_all_images, not "image" in current_mimetype)
+
+    if allow_all_images and (not "image" in current_mimetype):
+        raise HTTPException(status_code=400, detail="Not are image")
+
+    prepared_image = await loop.run_in_executor(process_pool, image_prepare, image_file,
+                                                wd_interrogator.model_target_size)
+
+    image_predicted_data = await wd_interrogator.async_predict(prepared_image, general_thresh=0.35,
+                                                               character_thresh=0.35)
+
+    print(image_hash, image_data)
+    image_data = {
+        "ratings": {rating: float(score) for rating, score in image_predicted_data[0]},
+        "general_tags": {tag: float(score) for tag, score in image_predicted_data[1]},
+        "characters": {character: float(score) for character, score in image_predicted_data[2]}
+    }
+    if not image_hash and database_worker:
+        image_hash = await calculate_image_hash(image_file)
+    if database_worker:
         await database_worker.put_image(image_hash, dict(image_data))
 
     return image_data
+
+
+@router.get("/model_image_size")
+async def model_image_size():
+    return wd_interrogator.model_target_info
 
 
 @router.put("/rating")
@@ -123,9 +147,12 @@ async def return_rating(
         image: UploadFile = File(...)
 ):
     image_bytes = io.BytesIO(await image.read())
+    image_prediction = await image_predict(image_bytes)
 
-    ratings, _, _ = await image_predict(image_bytes)
-    return {"ratings": {rating: float(score) for rating, score in ratings}}
+    image_prediction.pop("characters")
+    image_prediction.pop("general_tags")
+
+    return image_prediction
 
 
 @router.put("/tags")
@@ -133,11 +160,12 @@ async def return_tags(
         image: UploadFile = File(...)
 ):
     image_bytes = io.BytesIO(await image.read())
-    _, general_tags, character_tags = await image_predict(image_bytes)
+    image_prediction = await image_predict(image_bytes)
 
-    return {
-        "general_tags": {tag: float(score) for tag, score in general_tags},
-    }
+    image_prediction.pop("characters")
+    image_prediction.pop("ratings")
+
+    return image_prediction
 
 
 @router.put("/all")
@@ -145,8 +173,8 @@ async def return_all(
         image: UploadFile = File(...)
 ):
     image_bytes = io.BytesIO(await image.read())
-    ratings, general_tags, character_tags = await image_predict(image_bytes)
-    return {
-        "ratings": {rating: float(score) for rating, score in ratings},
-        "general_tags": {tag: float(score) for tag, score in general_tags},
-    }
+    image_prediction = await image_predict(image_bytes)
+
+    image_prediction.pop("characters")
+
+    return image_prediction

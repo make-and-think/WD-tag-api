@@ -21,8 +21,10 @@ class ImageCacheInterface:
                               ex=self._expired_time)
         return True
 
-    async def get_image(self, image_hash: int) -> dict:
-        image_json_data = await self.db_obj.get(f"{self._folder_name}:{image_hash}")
+    async def get_image(self, image_hash: int) -> dict | None:
+        key_name = f"{self._folder_name}:{image_hash}"
+        image_json_data = await self.db_obj.get(key_name)
         if not image_json_data:
             return None
+        await self.db_obj.expire(key_name, self._expired_time)
         return json.loads(image_json_data)
