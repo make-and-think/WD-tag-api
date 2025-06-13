@@ -100,6 +100,7 @@ def _image_predict(image_file: io.BytesIO) -> tuple[Any, Any, Any]:
 async def image_predict(image_file: io.BytesIO) -> dict:
     image_data = None
     image_hash = None
+
     if database_worker:  # TODO REPLACE WITH FUNC TO VARRRABLE
         image_hash = await calculate_image_hash(image_file)
         image_data = await database_worker.get_image(image_hash)
@@ -108,14 +109,17 @@ async def image_predict(image_file: io.BytesIO) -> dict:
         return image_data
 
     loop = asyncio.get_event_loop()
-    current_mimetype = magic.from_buffer(image_file.read(1024), mime=True)
 
-    if not allow_all_images and current_mimetype != "image/webp":
+    current_mimetype = magic.from_buffer(image_file.read(1024), mime=True)
+    image_file.seek(0)
+
+    if (not allow_all_images) and (current_mimetype != "image/webp"):
         raise HTTPException(status_code=400, detail="Image must be in WebP format")
+
     print(current_mimetype, allow_all_images, not "image" in current_mimetype)
 
     if allow_all_images and (not "image" in current_mimetype):
-        raise HTTPException(status_code=400, detail="Not are image")
+        raise HTTPException(status_code=400, detail=f"Not are image, current: {current_mimetype}")
 
     prepared_image = await loop.run_in_executor(process_pool, image_prepare, image_file,
                                                 wd_interrogator.model_target_size)
