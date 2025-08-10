@@ -1,6 +1,8 @@
 import io
 import json
 
+from app import config
+
 import redis.asyncio as redis
 from sympy.codegen.cnodes import union
 
@@ -8,7 +10,8 @@ from app.utils.images import calculate_image_hash
 
 
 class ImageCacheInterface:
-    def __init__(self, host="localhost", port=6379, password=None, expired_time=1800):
+    def __init__(self, host=config.database_host, port=config.database_port, password=config.database_password,
+                 expired_time=1800):
         self.db_obj = redis.Redis(host=host, port=port, password=password, decode_responses=True)
         self._folder_name = "wd-tag-cache"
         self._expired_time = expired_time

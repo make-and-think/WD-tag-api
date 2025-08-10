@@ -60,9 +60,9 @@ process_pool_quantity = values.get("models.process_pool_quantity")
 onnx_thread_quantity = values.get("models.onnx_thread_quantity")
 
 # Database config
-database_host = values.get("cache_database.host")
-database_port = values.get("cache_database.port")
-database_password = values.get("cache_database.password")
+database_host = values.get("cache_database.host", "localhost")
+database_port = values.get("cache_database.port", 6379)
+database_password = values.get("cache_database.password", None)
 
 # Auth config
 auth_tokens = values.get('auth.tokens')

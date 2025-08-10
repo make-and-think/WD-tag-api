@@ -16,6 +16,8 @@ allow_all_images = true
 general_thresh = 0.35
 character_thresh = 0.35
 
+
+
 # Avialable execution providers:
 # - CPUExecutionProvider: for CPU execution
 # - CUDAExecutionProvider: for NVIDIA GPU execution
