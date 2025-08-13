@@ -1,0 +1,66 @@
+services:
+  api-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./secrets.toml:/app/secrets.toml:ro
+      - models_data:/app/models
+      - logs_data:/app/logs
+    environment:
+      - DYNACONF_CACHE_DATABASE__HOST=redis
+      - DYNACONF_CACHE_DATABASE__PORT=6379
+      - DYNACONF_CACHE_DATABASE__PASSWORD=${REDIS_PASSWORD}
+      - DYNACONF_MODELS__EXECUTION_PROVIDER=CPUExecutionProvider
+    depends_on:
+      - redis
+    profiles:
+      - cpu
+
+  api-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./secrets.toml:/app/secrets.toml:ro
+      - models_data:/app/models
+      - logs_data:/app/logs
+    environment:
+      - DYNACONF_CACHE_DATABASE__HOST=redis
+      - DYNACONF_CACHE_DATABASE__PORT=6379
+      - DYNACONF_CACHE_DATABASE__PASSWORD=${REDIS_PASSWORD}
+      - DYNACONF_MODELS__EXECUTION_PROVIDER=CUDAExecutionProvider
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    profiles:
+      - gpu
+
+  redis:
+    image: "redis:7-alpine"
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+  models_data:
+  logs_data:
